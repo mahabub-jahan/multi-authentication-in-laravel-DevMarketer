@@ -1,0 +1,91 @@
+We have our logins working as intended and are able to log in and out as our different users. It finally feels like the app is coming together. We have a Users model and Admins model, tracking different types of users independently.
+
+Now we simply need to fix a few weird occurrences. The first problem we have is that if we ever try to go to our Admin center when we are not logged in, it redirects us to the Users Login Form. This is not right, we would expect the app to redirect us to the Admin Login Form so that we can log in as an Admin. We will fix this part first. This is can be handled in our exceptions handler.
+
+In the exceptions handler we will get the guard that triggered the exception and then compare it to the guards in our app. Since we only have two (non-api) guards this will be easy. Check to see if it is admin and if it isn't, then it must be the web guard. We will set our named route for each login form and then redirect to the one that gets triggered.
+
+The second problem is that when our "Guest" middleware notices a logged in user, it always redirects us to the /home location. This is ok when we are accessing a users guest path, but if we are trying to access an admin guest path, this is very unexpected. The more natural concept would be to redirect us to the admin dashboard. 
+
+We can edit this functionality in the RedirectIfAuthenticated Middleware. Just like before, we use our guard and test if it is either admin or web. Then redirect to the correct url for that guard's dashboard.
+
+
+Step 1:
+- Go to app/Http/Kernel.php
+	- protected $routeMiddleware = [
+        'auth' => \Illuminate\Auth\Middleware\Authenticate::class,
+    Note: When we run the auth middleware and you're not authenticated what it dose it throws an exception to redirect you to the login page and that exception that it throws is actually handled "app/Exceptions/Handler.php"
+    	-	public function render($request, Exception $exception)
+		    {
+		        return parent::render($request, $exception);
+		    }
+		    Note: press "Ctrl+right click" in parent then goto vendor\laravel\framework\src\Illuminate\Foundation\Exceptions\Handler.php and search this function
+		    protected function unauthenticated($request, AuthenticationException $exception)
+		    {
+		        return $request->expectsJson()
+		                    ? response()->json(['message' => $exception->getMessage()], 401)
+		                    : redirect()->guest(route('login'));
+		    }
+
+
+Step 2:
+- If loggin information invalid
+- Go to vendor\laravel\framework\src\Illuminate\Foundation\Exceptions\Handler.php
+ - protected function unauthenticated($request, AuthenticationException $exception)
+ 	- Here $exception is a exception object there is the guard that they're trying to access 
+
+
+ 	protected function unauthenticated($request, AuthenticationException $exception)
+    {
+        if($request->expectsJson()) {
+            return response()->json(['message' => $exception->getMessage()], 401);
+        }
+        $guard = array_get($exception->guards(),0); // gives us the string guards- web, api, admin, admin-api
+        switch ($guard) {
+            case 'admin':
+                $login = 'admin.login'; // This the route name
+                break;
+            default:
+                $login = 'login'; // Route name
+                break;
+        }
+        return redirect()->guest(route($login));
+        
+    }
+
+Step 3:
+- If loggin information valid
+- Go to app\Http\Middleware\RedirectIfAuthenticated.php
+	public function handle($request, Closure $next, $guard = null)
+    {
+        if (Auth::guard($guard)->check()) {
+            return redirect('/home');
+        }
+
+        return $next($request);
+    }
+
+    to:
+    public function handle($request, Closure $next, $guard = null)
+    {
+        switch ($guard) {
+            case 'admin':
+                if (Auth::guard($guard)->check()) {
+                    return redirect()->route('admin.dashboard');
+                }
+                break;
+            default:
+                if (Auth::guard($guard)->check()) {
+                    return redirect('/home');
+                }
+                break;
+        }
+        return $next($request);
+
+    }
+
+
+Step 4:
+- Try this URL in browser
+	- http://127.0.0.1:8000/login
+	- http://127.0.0.1:8000/admin/login
+	- 
