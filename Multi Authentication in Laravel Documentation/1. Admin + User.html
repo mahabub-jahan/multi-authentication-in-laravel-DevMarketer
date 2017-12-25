@@ -1,3 +1,8 @@
+In Laravel 5.4 we actually can natively support multiple User models (Sometimes called MultiAuth). This means we can have different users and manage these users independently, all using the Native Auth Facades, without any packages or plugins. An example of this would be Employees that manage a backend interface and then customers which have the ability to log in and manage accounts, but through the front end of the website. We want to use different tables to manage these types of users, and have different middleware and guards in place as well. This tutorial will show multiple authentication to you.
+
+This isn't documented very well in the Laravel documentation, so it is frustrating to find the correct way to do this. But I am happy that I have now put this tutorial series together to explain how to make this happen. It is a powerful feature that Laravel has and I'm excited to show everyone how to use it.
+
+
 Step 1: 
 - Run: php artisan make:auth
 - Run: php artisan make:migration create_admins_table --create=admins

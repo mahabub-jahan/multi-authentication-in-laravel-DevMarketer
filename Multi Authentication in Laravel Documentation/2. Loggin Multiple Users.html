@@ -1,0 +1,160 @@
+The previous video we set up multiple authentication guards and multiple authentication models natively in Laravel 5.4. Everything works well and our middleware is already protecting our pages. But now we need to let users log in. We already have access to the normal user's login page. But the problem is we don't have a way to let our Admins log in.
+
+In this video I will show you how to create a LoginController for our Admins to manage their login functionality. We are also going to make a login form, by simply duplicating the form that Users already have, but for your app you might want to make a custom login form for each user and you can do that here in your views.
+
+For the most part this video will be pretty straightforward for advanced Laravel devs. I recommend skipping this video if you don't feel like you need it.
+
+One challenging part might be how to log the user in. In this section of the controller we use the Auth::attempt function to log the user in using the native Laravel Auth facade
+
+
+Step 1:
+- First check the route list for user RUN: php artisan route:list
+
+Step 2: 
+- vendor/laravel/framework/illuminate/Foundation/Auth/AuthenticatesUser.php
+
+
+Step 3: 
+- web.php
+	// Auth for Admin
+
+	Route::prefix('admin')->group(function (){
+
+	    Route::get('/login', 'Auth\AdminLoginController@showLoginForm')->name('admin.login');
+	    Route::post('/login', 'Auth\AdminLoginController@login')->name('admin.login.submit');
+	    Route::get('/', 'AdminController@index')->name('admin.dashboard');
+	});
+
+	or we can group it
+
+		/*
+	Route::get('/admin', 'AdminController@index')->name('admin.dashboard');
+	Route::get('/admin/login', 'Auth\AdminLoginController@showLoginForm')->name('admin.login');
+	Route::post('/admin/login', 'Auth\AdminLoginController@login')->name('admin.login.submit');*/
+
+
+
+
+Step 4:
+- Duplicate the auth/login.blade.php to auth/admin-login.blade.php
+	@extends('layouts.app')
+
+@section('content')
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 col-md-offset-2">
+            <div class="panel panel-default">
+                <div class="panel-heading">Admin Login</div>
+
+                <div class="panel-body">
+                    <form class="form-horizontal" method="POST" action="{{ route('admin.login.submit') }}">
+                        {{ csrf_field() }}
+
+                        <div class="form-group{{ $errors->has('email') ? ' has-error' : '' }}">
+                            <label for="email" class="col-md-4 control-label">E-Mail Address</label>
+
+                            <div class="col-md-6">
+                                <input id="email" type="email" class="form-control" name="email" value="{{ old('email') }}" required autofocus>
+
+                                @if ($errors->has('email'))
+                                    <span class="help-block">
+                                        <strong>{{ $errors->first('email') }}</strong>
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+
+                        <div class="form-group{{ $errors->has('password') ? ' has-error' : '' }}">
+                            <label for="password" class="col-md-4 control-label">Password</label>
+
+                            <div class="col-md-6">
+                                <input id="password" type="password" class="form-control" name="password" required>
+
+                                @if ($errors->has('password'))
+                                    <span class="help-block">
+                                        <strong>{{ $errors->first('password') }}</strong>
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="col-md-6 col-md-offset-4">
+                                <div class="checkbox">
+                                    <label>
+                                        <input type="checkbox" name="remember" {{ old('remember') ? 'checked' : '' }}> Remember Me
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="col-md-8 col-md-offset-4">
+                                <button type="submit" class="btn btn-primary">
+                                    Login
+                                </button>
+
+                                <a class="btn btn-link" href="{{ route('password.request') }}">
+                                    Forgot Your Password?
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection
+
+
+Step 5:
+- Create a controller RUN: php artisan make:controller Auth/AdminLoginController
+
+- Note: 4 Step to login 
+	 	// Validate the form data
+
+        // Attempt to log the user in
+
+        // if successful, then redirect to their intended location
+
+        // if unsuccessful, then redirect back to the login  with the form data
+    }
+
+- AdminLoginController.php    
+	class AdminLoginController extends Controller
+	{
+	    public function __construct()
+	    {
+	        $this->middleware('guest:admin');
+	    }
+
+	    public function showLoginForm() {
+	        return view('auth.admin-login');
+	    }
+
+	    public function login(Request $request){
+	       // Validate the form data
+	        $this->validate($request, [
+	            'email' => 'required|email',
+	            'password' => 'required|min:6'
+	        ]);
+
+	        // Attempt to log the user in
+
+	        // Auth::attempt($credentials, $remember)
+	        if (Auth::guard('admin')->attempt(['email' => $request->email, 'password' => $request->password],$request->remember)) {
+	            // if successful, then redirect to their intended location
+	            return redirect()->intended(route('admin.dashboard'));
+	        }
+	        // if unsuccessful, then redirect back to the login  with the form data
+	        return redirect()->back()->withInput($request->only('email','remember'));
+
+	    }
+	}
+
+	Note: 
+		- Auth::attempt($credentials, $remember) here $remember is a cookies it return true or false value
+		- return redirect()->back()->withInput($request->only('email','remember')); here back() is just set through the they were at before. Here login page set before
+
+		
