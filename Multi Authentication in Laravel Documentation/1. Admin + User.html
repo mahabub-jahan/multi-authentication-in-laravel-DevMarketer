@@ -1,0 +1,126 @@
+Step 1: 
+- Run: php artisan make:auth
+- Run: php artisan make:migration create_admins_table --create=admins
+
+Step 2:
+- Duplicate the User.php model and rename it Admin.php
+	- Chang only the class name
+		class Admin extends Authenticatable
+	- Change the $fillable 
+		protected $fillable = [
+	        'name', 'email', 'password','job_title'
+	    ];
+
+Step 3:
+- Now we have to setup our guard
+- Config out authentication setting we have to go to config/auth.php
+- Create a new provider for admins
+	'providers' => [
+        'users' => [
+            'driver' => 'eloquent',
+            'model' => App\User::class,
+        ],
+        'admins' => [
+            'driver' => 'eloquent',
+            'model' => App\Admin::class,
+        ],
+
+        // 'users' => [
+        //     'driver' => 'database',
+        //     'table' => 'users',
+        // ],
+    ],
+
+
+- Create a new guards for admins
+	'guards' => [
+        'web' => [
+            'driver' => 'session',
+            'provider' => 'users',
+        ],
+
+        'api' => [
+            'driver' => 'token',
+            'provider' => 'users',
+        ],
+
+        'admin' => [
+            'driver' => 'session',
+            'provider' => 'admins',
+        ],
+
+        'admin-api' => [
+            'driver' => 'token',
+            'provider' => 'admins',
+        ],
+    ],
+
+- Change passwords to
+	'passwords' => [
+        'users' => [
+            'provider' => 'users',
+            'table' => 'password_resets',
+            'expire' => 60,
+        ],
+
+        'admins' => [
+            'provider' => 'admins',
+            'table' => 'password_resets',
+            'expire' => 15,
+        ],
+    ],
+
+- Last things we have to do to Admin model is excepting or knows which gurd work back with. So goto model Admin.php 
+
+	class Admin extends Authenticatable {
+    use Notifiable;
+    
+    protected $guard = 'admin';
+
+Step 4:
+- Now crate a controller name AdminController.php to duplicate the HomeController.php
+	class AdminController extends Controller
+	{
+	    
+	    public function __construct()
+	    {
+	        $this->middleware('auth:admin'); // Our middleware we need to define the gurd that we want to protect
+	    }
+
+	    
+	    public function index()
+	    {
+	        return view('admin');
+	    }
+	}
+
+
+- web.php
+	// Auth for Admin
+	Route::get('/admin', 'AdminControler@index');
+
+- Duplicate the view/home.blade.php to admin.blade.php
+
+	@extends('layouts.app')
+
+	@section('content')
+	    <div class="container">
+	        <div class="row">
+	            <div class="col-md-8 col-md-offset-2">
+	                <div class="panel panel-default">
+	                    <div class="panel-heading">Admin Dashboard</div>
+
+	                    <div class="panel-body">
+	                        @if (session('status'))
+	                            <div class="alert alert-success">
+	                                {{ session('status') }}
+	                            </div>
+	                        @endif
+
+	                        You are logged in as <strong>Admin</strong>!
+	                    </div>
+	                </div>
+	            </div>
+	        </div>
+	    </div>
+	@endsection
