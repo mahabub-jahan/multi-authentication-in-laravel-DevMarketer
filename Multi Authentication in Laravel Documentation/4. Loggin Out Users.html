@@ -1,0 +1,143 @@
+So far in this series we have covered in depth how to set up an authentication system with multiple user types (not to be confused with user roles which are different). In this video of the series we will address questions on how to log users out of the app.
+
+First we want to set up some debugging tools so we know if we are logged in as a normal user, as an admin, or both.
+
+Once we have that figured out, it will make things a lot easier and now we can set up the logout function.
+
+The process is fairly straightforward. We are going to copy the logout() function from the laravel foundation source files. We then can customize it with our guard and finally tie it into a route so it can execute.
+
+
+Step 1: 
+- For practic perpose you can do in...
+	- create views/components/who.blade.php
+		@if (Auth::guard('web')->check())
+	    <p class="text-success">
+	        You are Logged In as a <strong>USER</strong>
+	    </p>
+	@else
+	    <p class="text-danger">
+	        You are Logged Out as a <strong>USER</strong>
+	    </p>
+	@endif
+
+
+
+	@if (Auth::guard('admin')->check())
+	    <p class="text-success">
+	        You are Logged In as a <strong>ADMIN</strong>
+	    </p>
+	@else
+	    <p class="text-danger">
+	        You are Logged Out as a <strong>ADMIN</strong>
+	    </p>
+	@endif
+
+	- views/admin.blade.php
+
+		@extends('layouts.app')
+
+		@section('content')
+		    <div class="container">
+		        <div class="row">
+		            <div class="col-md-8 col-md-offset-2">
+		                <div class="panel panel-default">
+		                    <div class="panel-heading">Admin Dashboard</div>
+
+		                    <div class="panel-body">
+
+		                        @component('components.who')
+
+		                        @endcomponent
+
+		                    </div>
+		                </div>
+		            </div>
+		        </div>
+		    </div>
+		@endsection
+
+		- views/home.blade.php
+			@extends('layouts.app')
+
+			@section('content')
+			<div class="container">
+			    <div class="row">
+			        <div class="col-md-8 col-md-offset-2">
+			            <div class="panel panel-default">
+			                <div class="panel-heading">User Dashboard</div>
+
+			                <div class="panel-body">
+			                    @component('components.who')
+			                    @endcomponent
+			                </div>
+			            </div>
+			        </div>
+			    </div>
+			</div>
+			@endsection
+
+
+		- views/welcom.blade.php 
+
+					         @endauth
+			                </div>
+			            @endif
+
+			            <div class="content">
+			                <div class="row">
+			                    <div class="col-md-8 col-md-offset-2">
+			                        <div class="panel">
+			                            @component('components.who')
+			                            @endcomponent
+			                        </div>
+			                    </div>
+			                </div>
+			            </div>
+			        </div>
+			    </body>
+			</html>
+
+
+
+Step 2:
+- Go to "vendor/laravel/framework/src/Illuminate/Foundation/Auth/AuthenticatesUsers.php"
+	- copy the function 
+		public function logout(Request $request)
+	    {
+	        $this->guard()->logout();
+
+	        $request->session()->invalidate();
+
+	        return redirect('/');
+	    }
+
+- Now go to app/Http/Controllers/Auth/AdminLoginController.php and past that fuction and edit it to 
+
+	public function logout(Request $request)
+    {
+        Auth::guard('admin')->logout();
+
+        return redirect('/');
+    }
+
+    - also update the constructor
+    	public function __construct()
+	    {
+	        $this->middleware('guest:admin', ['except' => ['logout']]);
+	    }
+
+
+Step 3:
+- Go to "app/Http/Controllers/Auth/LoginController.php" and write
+	// Update the construct
+	public function __construct()
+    {
+        $this->middleware('guest')->except('logout','userLogout');
+    }
+
+    public function userLogout()
+    {
+        Auth::guard('web')->logout(); // We can't name it 'logout()' because it override inside the "AuthenticatesUsers" that's why we name it different
+
+        return redirect('/');
+    }
