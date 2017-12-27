@@ -1,0 +1,56 @@
+Step 1: 
+- Change the "resources/views/auth/register.blade.php" and add a extra field like
+	<div class="form-group{{ $errors->has('address') ? ' has-error' : '' }}">
+        <label for="address" class="col-md-4 control-label">Address</label>
+
+        <div class="col-md-6">
+            <input id="address" type="text" class="form-control" name="address" value="{{ old('address') }}" required autofocus>
+
+            @if ($errors->has('address'))
+                <span class="help-block">
+                    <strong>{{ $errors->first('address') }}</strong>
+                </span>
+            @endif
+        </div>
+    </div>
+
+Step 2:
+- Go to "database/migrations/2014_10_12_000000_create_users_table.php" and add
+	$table->increments('id');
+    $table->string('name');
+    $table->string('email',100)->unique();
+    $table->string('password');
+    $table->text('address'); // new field
+    $table->rememberToken();
+    $table->timestamps();
+
+- then Run: php artisan migrate:refresh
+
+Step 3:
+- Then go to "app/Http/Controllers/Auth/RegisterController.php" and edit validator function, and create function 
+	protected function validator(array $data)
+    {
+        return Validator::make($data, [
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|min:6|confirmed',
+            'address' => 'required|string', // New field add
+        ]);
+    }
+
+    /**
+     * Create a new user instance after a valid registration.
+     *
+     * @param  array  $data
+     * @return \App\User
+     */
+    protected function create(array $data)
+    {
+        return User::create([
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'password' => bcrypt($data['password']),
+            'address' => $data['address'], // New field add
+        ]);
+    }
+
